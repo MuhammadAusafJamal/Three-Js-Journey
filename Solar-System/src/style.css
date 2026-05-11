@@ -1,0 +1,88 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box
+}
+
+body {
+  margin: 0;
+  background: black;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#overlay {
+  position: fixed;
+  top: 24px;
+  left: 32px;
+  color: white;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+
+#overlay h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+#overlay p {
+  font-size: 14px;
+  opacity: 0.65;
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+#loader {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  color: white;
+}
+
+.loader-title {
+  font-size: 13px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 28px;
+}
+
+.loader-bar {
+  width: 240px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.loader-progressBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0%;
+  background: #fff;
+  transition: width 0.25s ease-out;
+}
+
+.loader-percentage {
+  font-size: 10px;
+  letter-spacing: 2px;
+  opacity: 0.4;
+  margin-top: 16px;
+  font-variant-numeric: tabular-nums;
+}
