@@ -245,7 +245,7 @@ const animateCanvas = () => {
             m.mesh.rotation.y += delte * 0.5;
         });
     });
-
+    controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(animateCanvas);
 };
