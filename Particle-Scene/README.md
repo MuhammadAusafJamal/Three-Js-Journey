@@ -1,10 +1,10 @@
-# Solar System
+# Particles Scene
 
 **Made by Muhammad Ausaf Jamal**
 
-🔗 Live demo: <https://three-js-journey-solar-system.vercel.app/>
+🔗 Live demo: <https://three-js-journey-particles-scene.vercel.app/>
 
-An interactive 3D model of the Solar System built with [Three.js](https://threejs.org/). You can drag to orbit around the Sun, scroll to zoom in and out, and watch the planets and their moons spin around in real time.
+A small 3D scene built with [Three.js](https://threejs.org/) made entirely out of points (particles). A glowing shape spins in the middle while hundreds of fireflies drift around it.
 
 ---
 
@@ -12,11 +12,11 @@ An interactive 3D model of the Solar System built with [Three.js](https://threej
 
 When you open the page:
 
-1. **A loading screen appears** showing the title "Solar System" and a progress bar with a percentage. This waits until all the planet images (textures) are downloaded.
-2. **Once everything is loaded**, the loading screen fades away and the camera flies in from far away down to the Solar System — a smooth intro animation.
-3. **You see the Sun in the middle**, glowing, with all 8 planets orbiting around it on faint circular paths.
-4. **You can move the view** — drag with the mouse to rotate around, and scroll to zoom closer or further out.
-5. **Everything keeps moving** — planets orbit the Sun, they spin on their own axis, moons orbit their planets, and cloud layers drift slowly.
+1. **You see a glowing orange shape** in the center — it's a twisted knot drawn as thousands of tiny dots instead of a solid surface.
+2. **The shape slowly rotates** on its own.
+3. **Hundreds of yellow fireflies** float around the scene, gently bobbing up and down.
+4. **Each firefly moves on its own** — they all rise and fall at different times, so it looks natural instead of everything moving together.
+5. **You can move the view** — drag with the mouse to rotate around, and scroll to zoom in and out (within a set range).
 
 ---
 
@@ -24,38 +24,30 @@ When you open the page:
 
 | Thing | Details |
 |-------|---------|
-| **Sun** | A big textured sphere in the center, with a soft orange glow around it and a point light that lights up all the planets. |
-| **8 Planets** | Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune — each with its own real texture, size, distance from the Sun, orbit speed, and axial tilt. |
-| **Orbit paths** | A thin glowing ring is drawn for each planet so you can see its orbit. |
-| **Moons** | Earth has 1 moon, Mars has 2, Jupiter has 4, Neptune has 1 — each orbiting its planet at its own speed. |
-| **Earth extras** | Earth has a separate slowly-rotating cloud layer, plus normal/specular/night-map textures included. |
-| **Venus clouds** | Venus has a thick atmosphere layer on top of its surface. |
-| **Saturn's rings** | A flat ring around Saturn made from a ring texture, with the UVs fixed so the texture wraps correctly from inner to outer edge. |
-| **Stars background** | An 8K starfield image wrapped around the whole scene as the background. |
-| **Lighting** | A bright point light at the Sun + a tiny bit of ambient light so the dark sides of planets aren't pitch black. |
+| **Torus knot** | A twisted knot shape, drawn as points using `PointsMaterial` instead of solid faces. Glows orange and rotates slowly. |
+| **Fireflies** | 1000 yellow points scattered around the scene. Each one has a soft round glow and bobs up and down. |
+| **Firefly glow** | The glow is a small texture drawn on the fly with a 2D canvas — a white radial gradient that fades to transparent. |
+| **Additive blending** | Where fireflies overlap, their light adds up and looks brighter — like real glowing dots. |
 
 ---
 
 ## How it works (technical bits, kept short)
 
-- **`index.html`** — the page: a `<canvas>` for the 3D scene, a title overlay, and the loading screen markup. Loads `src/app.js`.
+- **`index.html`** — the page: a `<canvas>` for the 3D scene and a title overlay. Loads `src/app.js`.
 - **`src/app.js`** — all the 3D logic:
   - Sets up the Three.js **scene, camera, renderer, and OrbitControls**.
-  - A **`planetsData` array** holds the settings for every planet (name, size, distance, speed, tilt, moons, rings, cloud textures). Adding or tweaking a planet is just editing this array.
-  - A **`LoadingManager`** tracks texture download progress and drives the loading bar; when done it fades the loader and runs the GSAP camera fly-in.
-  - **`createPlanet()`** builds each planet: its orbit ring, a pivot object it rotates around, the planet mesh with a `MeshStandardMaterial`, optional cloud sphere, optional Saturn ring (with manual UV fix), and any moons.
-  - The **animation loop** uses a clock + a `simulation.speed` multiplier to advance every planet's orbit, self-rotation, cloud rotation, and moon orbits each frame.
+  - Takes a **`TorusKnotGeometry`** and reuses just its points to draw it as a particle cloud.
+  - Creates **1000 fireflies** at random positions, keeping a copy of their starting spots so only the up/down motion changes.
+  - **`createFireflyTexture()`** draws a soft round glow on a 2D canvas and uses it as the firefly texture.
+  - The **animation loop** uses a clock to rotate the knot and to bob each firefly with a sine wave — each firefly gets a unique offset so they move out of sync.
   - Handles **window resize** so the scene always fills the screen.
-- **`src/style.css`** — black full-screen background, the title overlay styling, and the loading-screen / progress-bar styling.
-- **`src/textures/`** — all the planet, moon, Sun, ring, and star images (mostly 8K resolution).
+- **`src/style.css`** — full-screen background and the title overlay styling.
 
 ---
 
 ## Tech used
 
 - **[Three.js](https://threejs.org/)** — 3D rendering
-- **[GSAP](https://greensock.com/gsap/)** — the smooth intro camera animation and loader fade
-- **[lil-gui](https://lil-gui.georgealways.com/)** — included for debug controls
 - **[Vite](https://vitejs.dev/)** — dev server and build tool
 
 ---

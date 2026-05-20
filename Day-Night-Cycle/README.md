@@ -1,10 +1,10 @@
-# Solar System
+# Day / Night Cycle
 
 **Made by Muhammad Ausaf Jamal**
 
-🔗 Live demo: <https://three-js-journey-solar-system.vercel.app/>
+🔗 Live demo: <https://three-js-journey-day-night-cycle.vercel.app/>
 
-An interactive 3D model of the Solar System built with [Three.js](https://threejs.org/). You can drag to orbit around the Sun, scroll to zoom in and out, and watch the planets and their moons spin around in real time.
+A small 3D scene built with [Three.js](https://threejs.org/) where the sun rises and sets in a loop. As the sun moves across the sky, the sky color, the lighting, and the shadows all change — and a moon takes over for the night.
 
 ---
 
@@ -12,11 +12,13 @@ An interactive 3D model of the Solar System built with [Three.js](https://threej
 
 When you open the page:
 
-1. **A loading screen appears** showing the title "Solar System" and a progress bar with a percentage. This waits until all the planet images (textures) are downloaded.
-2. **Once everything is loaded**, the loading screen fades away and the camera flies in from far away down to the Solar System — a smooth intro animation.
-3. **You see the Sun in the middle**, glowing, with all 8 planets orbiting around it on faint circular paths.
-4. **You can move the view** — drag with the mouse to rotate around, and scroll to zoom closer or further out.
-5. **Everything keeps moving** — planets orbit the Sun, they spin on their own axis, moons orbit their planets, and cloud layers drift slowly.
+1. **You see a little landscape** — a green ground with a box, a cone, and a sphere sitting on it.
+2. **The sun travels across the sky** in a circle, over and over. One full day takes about 20 seconds.
+3. **The sky changes color** as the sun moves — light blue in the day, orange at sunset, and almost black at night.
+4. **Shadows move with the sun** — they stretch and sweep across the ground as the sun rises and sets.
+5. **At night the moon shows up** on the opposite side of the sky, giving off a soft blue light so the scene is never fully dark.
+6. **You can move the view** — drag with the mouse to rotate around, and scroll to zoom in and out.
+7. **A control panel** in the corner lets you tweak almost everything live (see below).
 
 ---
 
@@ -24,38 +26,50 @@ When you open the page:
 
 | Thing | Details |
 |-------|---------|
-| **Sun** | A big textured sphere in the center, with a soft orange glow around it and a point light that lights up all the planets. |
-| **8 Planets** | Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune — each with its own real texture, size, distance from the Sun, orbit speed, and axial tilt. |
-| **Orbit paths** | A thin glowing ring is drawn for each planet so you can see its orbit. |
-| **Moons** | Earth has 1 moon, Mars has 2, Jupiter has 4, Neptune has 1 — each orbiting its planet at its own speed. |
-| **Earth extras** | Earth has a separate slowly-rotating cloud layer, plus normal/specular/night-map textures included. |
-| **Venus clouds** | Venus has a thick atmosphere layer on top of its surface. |
-| **Saturn's rings** | A flat ring around Saturn made from a ring texture, with the UVs fixed so the texture wraps correctly from inner to outer edge. |
-| **Stars background** | An 8K starfield image wrapped around the whole scene as the background. |
-| **Lighting** | A bright point light at the Sun + a tiny bit of ambient light so the dark sides of planets aren't pitch black. |
+| **Ground** | A flat green plane that everything sits on and that catches shadows. |
+| **Shapes** | A box, a cone, and a sphere — simple objects that cast and receive shadows. |
+| **Sun** | A big textured sphere that moves in a circular arc. It carries the main light. |
+| **Moon** | A textured sphere on the opposite side of the sky, with its own soft glow for night. |
+| **Sun light** | A warm directional light that follows the sun and casts sharp shadows. |
+| **Moon light** | A dim blue directional light for the night side. |
+| **Ambient light** | A fill light that turns warm during the day and cool at night so nothing goes pitch black. |
+| **Sky** | The background color blends between day, sunset, and night depending on how high the sun is. |
+
+---
+
+## Control panel (lil-gui)
+
+A panel in the top-right corner lets you change things in real time:
+
+- **Cycle** — day length, pause the cycle, scrub the time of day by hand, change the orbit radius.
+- **Sun Light** — intensity, color, shadows on/off.
+- **Moon Light** — intensity, color, shadows on/off.
+- **Ambient Light** — separate day and night colors and intensities.
+- **Sky Colors** — pick the day, sunset, and night sky colors.
+- **Objects** — recolor the ground, box, cone, and sphere.
 
 ---
 
 ## How it works (technical bits, kept short)
 
-- **`index.html`** — the page: a `<canvas>` for the 3D scene, a title overlay, and the loading screen markup. Loads `src/app.js`.
+- **`index.html`** — the page: a `<canvas>` for the 3D scene and a title overlay. Loads `src/app.js`.
 - **`src/app.js`** — all the 3D logic:
-  - Sets up the Three.js **scene, camera, renderer, and OrbitControls**.
-  - A **`planetsData` array** holds the settings for every planet (name, size, distance, speed, tilt, moons, rings, cloud textures). Adding or tweaking a planet is just editing this array.
-  - A **`LoadingManager`** tracks texture download progress and drives the loading bar; when done it fades the loader and runs the GSAP camera fly-in.
-  - **`createPlanet()`** builds each planet: its orbit ring, a pivot object it rotates around, the planet mesh with a `MeshStandardMaterial`, optional cloud sphere, optional Saturn ring (with manual UV fix), and any moons.
-  - The **animation loop** uses a clock + a `simulation.speed` multiplier to advance every planet's orbit, self-rotation, cloud rotation, and moon orbits each frame.
+  - Sets up the Three.js **scene, camera, renderer, and OrbitControls**, with soft shadows turned on.
+  - Builds the **ground and shapes**, the **sun and moon**, and all the **lights**.
+  - A **GSAP tween** runs the `cycle.angle` from `0` to `360°` forever — that single value drives the whole day.
+  - **`updateCycle()`** runs every frame the angle changes: it positions the sun and moon, moves the lights, blends the ambient light, and picks the sky color based on how high the sun is.
+  - A **`lil-gui` panel** is wired to a `params` object so every setting can be changed live.
   - Handles **window resize** so the scene always fills the screen.
-- **`src/style.css`** — black full-screen background, the title overlay styling, and the loading-screen / progress-bar styling.
-- **`src/textures/`** — all the planet, moon, Sun, ring, and star images (mostly 8K resolution).
+- **`src/style.css`** — full-screen background and the title overlay styling.
+- **`src/textures/`** — the sun and moon images.
 
 ---
 
 ## Tech used
 
 - **[Three.js](https://threejs.org/)** — 3D rendering
-- **[GSAP](https://greensock.com/gsap/)** — the smooth intro camera animation and loader fade
-- **[lil-gui](https://lil-gui.georgealways.com/)** — included for debug controls
+- **[GSAP](https://greensock.com/gsap/)** — drives the day/night cycle
+- **[lil-gui](https://lil-gui.georgealways.com/)** — the live control panel
 - **[Vite](https://vitejs.dev/)** — dev server and build tool
 
 ---
