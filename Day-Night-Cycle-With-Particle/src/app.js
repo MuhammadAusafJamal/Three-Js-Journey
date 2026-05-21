@@ -10,7 +10,7 @@ const canvas = document.querySelector('canvas');
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(80, innerWidth / innerHeight, 0.1, 1000);
-camera.position.set(0, 15, 60);
+camera.position.set(14, 140, 205);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, canvas });
 renderer.setSize(innerWidth, innerHeight);
