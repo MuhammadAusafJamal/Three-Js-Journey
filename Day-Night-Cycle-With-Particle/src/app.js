@@ -233,7 +233,7 @@ sunLight.shadow.bias = -0.001;
 sunLight.shadow.normalBias = 0.02;
 scene.add(sunLight);
 
-const moonLight = new THREE.DirectionalLight(0x8899bb, 2);
+const moonLight = new THREE.DirectionalLight(0x8899bb, 5);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.width = 2048;
 moonLight.shadow.mapSize.height = 2048;
@@ -261,12 +261,12 @@ const cycle = { angle: 0 };
 const RADIUS = 300;
 
 const params = {
-    cycleDuration: 900,
+    cycleDuration: 10,
     pauseCycle: false,
     sunIntensity: 1.5,
     sunColor: '#fff4d6',
     sunShadows: true,
-    moonIntensity: 2,
+    moonIntensity: 5,
     moonColor: '#8899bb',
     moonShadows: true,
     dayAmbientColor: '#c8d8e8',
