@@ -215,9 +215,6 @@ moon.castShadow = true;
 moon.receiveShadow = true;
 scene.add(moon);
 
-const moonSelfLight = new THREE.PointLight(0xd0d8ff, 1.2, 80);
-scene.add(moonSelfLight);
-
 // Lights
 const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
 scene.add(ambientLight);
@@ -236,7 +233,7 @@ sunLight.shadow.bias = -0.001;
 sunLight.shadow.normalBias = 0.02;
 scene.add(sunLight);
 
-const moonLight = new THREE.DirectionalLight(0x8899bb, 0.3);
+const moonLight = new THREE.DirectionalLight(0x8899bb, 2);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.width = 2048;
 moonLight.shadow.mapSize.height = 2048;
@@ -264,7 +261,7 @@ const cycle = { angle: 0 };
 const RADIUS = 300;
 
 const params = {
-    cycleDuration: 100,
+    cycleDuration: 900,
     pauseCycle: false,
     sunIntensity: 1.5,
     sunColor: '#fff4d6',
@@ -288,7 +285,6 @@ function updateCycle() {
     sunLight.position.copy(sun.position);
     moon.position.set(-sun.position.x, -sun.position.y, 0);
     moonLight.position.copy(moon.position);
-    moonSelfLight.position.copy(moon.position);
 
     // Light intensities
     sunLight.intensity = Math.max(0, sunHeight * params.sunIntensity);
