@@ -2,7 +2,7 @@
 
 **Made by Muhammad Ausaf Jamal**
 
-🔗 Live demo: <https://three-js-journey-day-night-cycle.vercel.app/>
+🔗 Live demo: <https://three-js-journey-day-night-cycle-with-particles.vercel.app/>
 
 A small 3D scene built with [Three.js](https://threejs.org/) where the sun rises and sets in a loop. As the sun moves across the sky, the sky color, the lighting, and the shadows all change — a moon takes over for the night, and fireflies glow into life once it gets dark.
 
