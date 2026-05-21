@@ -13,8 +13,7 @@ Each folder in this repo is its own self-contained project with its own README. 
 | Project | What it is | Live demo |
 |---------|------------|-----------|
 | [Solar System](./Solar-System) | An interactive 3D Solar System — drag to orbit the Sun, zoom in and out, and watch all 8 planets and their moons spin in real time. Has a loading screen, a camera fly-in intro, Saturn's rings, cloud layers, and an 8K starfield background. | https://three-js-journey-solar-system.vercel.app/ |
-| [Day / Night Cycle](./Day-Night-Cycle) | A 3D scene where the sun rises and sets in a loop — the sky shifts through day, sunset, and night while shadows sweep across a small landscape of shapes. A moon lights the night side, and a lil-gui panel lets you tweak everything live. | https://three-js-journey-day-night-cycle.vercel.app/ |
-| [Particles Scene](./Particle-Scene) | A 3D scene made entirely of points — a glowing orange torus knot drawn as particles, surrounded by 1000 yellow fireflies that drift and bob through the air. | https://three-js-journey-particles-scene.vercel.app/ |
+| [Day / Night Cycle](./Day-Night-Cycle) | A 3D scene where the sun rises and sets in a loop over a cottage in a forest — the sky shifts through day, sunset, and night while shadows sweep across the ground. A moon lights the night side, fireflies glow into life after dark, and a lil-gui panel lets you tweak everything live. | https://three-js-journey-day-night-cycle.vercel.app/ |
 
 > More coming soon as the journey continues.
 
