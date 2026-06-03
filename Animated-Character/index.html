@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animated Character</title>
+</head>
+
+<body>
+  <canvas></canvas>
+
+  <div id="overlay">
+    <h1>Animated Character</h1>
+    <p>Muhammad Ausaf Jamal</p>
+  </div>
+
+  <div id="hud">
+    <div class="hud-score">Blocks down: <span id="score">0</span> / <span id="total">0</span></div>
+    <div class="hud-anim">Animation: <span id="anim">Idle</span></div>
+    <div class="hud-hint">
+      <b>WASD</b> move &middot; <b>Shift</b> run &middot; <b>Space</b> jump<br />
+      Click the <b>robot</b> to change its animation &middot;
+      click the <b>ground</b> to throw a ball &middot;
+      knock down every block!
+    </div>
+    <div class="hud-win" id="win">🏆 All blocks down — you win!</div>
+  </div>
+
+  <div id="loader">
+    <div class="loader-title">Loading</div>
+    <div class="loader-bar">
+      <div class="loader-progressBar"></div>
+    </div>
+    <div class="loader-percentage">0%</div>
+  </div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+
+</html>
