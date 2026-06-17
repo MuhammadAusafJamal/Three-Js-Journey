@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Clone</title>
+</head>
+
+<body>
+  <canvas></canvas>
+
+  <!-- Centre crosshair -->
+  <div id="crosshair"></div>
+
+  <!-- Top-left clock / time of day -->
+  <div id="clock">
+    <span id="clock-icon">☀️</span>
+    <span id="clock-time">12:00</span>
+  </div>
+
+  <!-- FPS / block counter -->
+  <div id="stats">
+    <span id="fps">60</span> fps &middot;
+    <span id="blockcount">0</span> blocks
+  </div>
+
+  <!-- Start / pause overlay -->
+  <div id="overlay">
+    <div class="panel">
+      <h1>MINECRAFT CLONE</h1>
+      <p class="byline">Muhammad Ausaf Jamal · Three.js + Rapier</p>
+      <button id="play">▶ Click to Play</button>
+      <ul class="controls">
+        <li><b>Move</b> WASD &nbsp; <b>Look</b> Mouse &nbsp; <b>Jump</b> Space</li>
+        <li><b>Run</b> Shift &nbsp; <b>Fly</b> F (Space up / Ctrl down)</li>
+        <li><b>Break</b> Left-click &nbsp; <b>Place</b> Right-click</li>
+        <li><b>Select block</b> 1–9 keys / scroll wheel</li>
+        <li><b>Pause</b> Esc &nbsp; <b>Ignite TNT</b> break a TNT block</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Loading screen -->
+  <div id="loader">
+    <div class="loader-inner">
+      <div class="loader-cube"></div>
+      <div class="loader-title">Generating world…</div>
+      <div class="loader-bar"><div class="loader-progressBar"></div></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+
+</html>

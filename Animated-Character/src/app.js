@@ -284,6 +284,7 @@ function cycleAnimation() {
 const loaderEl = document.getElementById('loader');
 const progressBar = document.querySelector('.loader-progressBar');
 const percentEl = document.querySelector('.loader-percentage');
+const subEl = document.querySelector('.loader-sub');
 
 const manager = new THREE.LoadingManager();
 manager.onProgress = (_url, loaded, total) => {
@@ -294,7 +295,12 @@ manager.onProgress = (_url, loaded, total) => {
 manager.onLoad = () => {
     progressBar.style.width = '100%';
     percentEl.textContent = '100%';
-    setTimeout(() => loaderEl.remove(), 350);
+    if (subEl) subEl.textContent = 'ready!';
+    // fade out gracefully, then remove from the DOM
+    setTimeout(() => {
+        loaderEl.classList.add('hidden');
+        loaderEl.addEventListener('transitionend', () => loaderEl.remove(), { once: true });
+    }, 400);
 };
 
 const gltfLoader = new GLTFLoader(manager);
