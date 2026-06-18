@@ -5,10 +5,11 @@
 🔗 Live demo: <https://three-js-journey-basic-minecraft-clone.vercel.app/>
 
 A voxel sandbox built with [Three.js](https://threejs.org/) and the
-[Rapier](https://rapier.rs/) physics engine. Spawn into a procedurally
-generated world of grass, dirt, stone, sand and water — dotted with trees —
-then explore it in **first person** to build or dig your way through it. A full
-day/night cycle drifts overhead with an orbiting sun and moon.
+[Rapier](https://rapier.rs/) physics engine. Spawn into an **endless**,
+procedurally generated world of grass, dirt, stone, sand and water — dotted with
+trees — then explore it in **first person** to build or dig your way through it.
+The terrain streams in as **chunks** around you, so it keeps going in every
+direction. A full day/night cycle drifts overhead with an orbiting sun and moon.
 
 ---
 
@@ -36,7 +37,7 @@ day/night cycle drifts overhead with an orbiting sun and moon.
 
 | Objective | How it's done |
 |-----------|---------------|
-| Basic terrain with textures | Procedural height-mapped voxel world; every block face uses a hand-drawn 16×16 pixel-art canvas texture (no external assets). |
+| Basic terrain with textures | Procedural height-mapped voxel world, streamed in chunks so it extends endlessly; every block face uses a hand-drawn 16×16 pixel-art canvas texture (no external assets). |
 | Character + controls | A Rapier **kinematic capsule** driven by a `KinematicCharacterController` (gravity, jumping, auto-step, ground snapping), viewed through a **first-person** camera placed at eye level and steered by mouse-look. |
 | Core blocks | Grass, dirt, stone and sand, each with correct top/side/bottom faces. |
 | Place / destroy + sounds | Crosshair `Raycaster` targets blocks; placing and breaking are wired to procedurally-synthesised WebAudio sounds (plus an explosion for TNT). |
@@ -46,18 +47,29 @@ day/night cycle drifts overhead with an orbiting sun and moon.
 
 ### Bonus objectives
 
+- **Infinite streaming world** — terrain is generated in 16×16 **chunks** around
+  the player; as you walk, new chunks stream in (one per frame, nearest first)
+  and distant ones unload, so the world extends forever in every direction with
+  a bounded memory/collider footprint. Fog is tuned to the load radius so chunks
+  fade in instead of popping at a hard edge.
 - **Procedural terrain + trees** — fractal value-noise heightmap with beaches, a
   water table, and scattered procedurally-placed trees (logs + leaf canopies).
+  Chunks are generated independently (a tree's canopy is written by whichever
+  chunk owns each leaf), so loading order never matters.
 - **Advanced blocks** — translucent **glass**, a non-solid **water** block you
   can wade through, and **TNT** that explodes into Rapier dynamic-body debris.
-- **Performance** — one **`InstancedMesh` per block type** (≈12k blocks in a
+- **Performance** — one **`InstancedMesh` per block type** (the whole world in a
   handful of draw calls), **exposed-block culling** (fully-buried voxels are
-  never meshed *or* given a collider), shared geometry/materials, and a tightly
-  scoped shadow camera.
+  never meshed *or* given a collider), per-frame chunk streaming to avoid hitches,
+  shared geometry/materials, and a tightly scoped shadow camera. Drop `RENDER_DIST`
+  in `app.js` for more FPS, raise it for a longer view.
 
 ---
 
 ## How it works (short version)
+
+> Want the **long** version — every system explained, design decisions, and a big
+> Q&A of likely questions? See **[EXPLAINER.md](./EXPLAINER.md)**.
 
 - **`index.html`** — the `<canvas>`, the HUD (crosshair, clock, FPS/block
   counter) and the start/pause overlay.
@@ -66,9 +78,13 @@ day/night cycle drifts overhead with an orbiting sun and moon.
   - **Textures** are painted onto 16×16 canvases at startup and sampled with
     `NearestFilter` for crisp pixels.
   - The **world** is a `Map` of `"x,y,z" → { type, instanceIndex, collider }`.
-    `generateWorld()` fills columns from a noise heightmap; `refreshBlock()`
-    reconciles each voxel's instanced-mesh slot and Rapier collider with whether
-    it is exposed.
+    `loadChunk()` fills a 16×16 chunk's columns from a noise heightmap;
+    `refreshBlock()` reconciles each voxel's instanced-mesh slot and Rapier
+    collider with whether it is exposed.
+  - **`updateChunks()` / `processLoadQueue()`** run each frame: as the player
+    crosses chunk borders, missing chunks in the render radius are queued
+    (nearest first) and built one per frame, while chunks beyond the radius are
+    dropped by `unloadChunk()` — that's what makes the world effectively infinite.
   - **`setBlock` / `removeBlock`** edit the map and refresh the six neighbours,
     so digging reveals the stone underneath and sealing a block frees its mesh
     slot + collider.

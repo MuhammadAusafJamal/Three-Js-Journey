@@ -172,7 +172,7 @@ const HOTBAR = ['grass', 'dirt', 'stone', 'sand', 'log', 'leaves', 'glass', 'wat
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const dummy = new THREE.Object3D();
 const tmpMat = new THREE.Matrix4();
-const CAPACITY = 9000;
+const CAPACITY = 30000;          // per-type instance budget (sized for the streamed chunk radius)
 
 class InstancedField {
     constructor(type) {
@@ -188,7 +188,10 @@ class InstancedField {
         scene.add(this.mesh);
     }
     add(k, x, y, z) {
-        if (this.mesh.count >= CAPACITY) return -1;
+        if (this.mesh.count >= CAPACITY) {
+            if (!this._warned) { console.warn(`InstancedField "${this.type}" hit CAPACITY (${CAPACITY})`); this._warned = true; }
+            return -1;
+        }
         const i = this.mesh.count++;
         dummy.position.set(x, y, z);
         dummy.rotation.set(0, 0, 0);
@@ -272,6 +275,9 @@ function setBlock(x, y, z, type) {
     const k = key(x, y, z);
     if (world.has(k)) return;
     world.set(k, { type, index: -1, collider: null });
+    // tie placed blocks to their chunk so they unload with it (no orphans / leaks)
+    const owner = loadedChunks.get(`${chunkOf(x)},${chunkOf(z)}`);
+    if (owner) owner.push(k);
     refreshBlock(k);
     for (const [dx, dy, dz] of NEIGHBORS) refreshBlock(key(x + dx, y + dy, z + dz));
     blockCountDirty = true;
@@ -310,61 +316,148 @@ function makeNoise(seed) {
     };
 }
 
-const HALF = 24;                  // world spans -HALF .. HALF-1  (48×48)
+const CHUNK = 16;                 // blocks per chunk edge
+const RENDER_DIST = 3;            // chunks loaded around the player (radius). Lower it for more FPS.
 const WATER_LEVEL = 2;
+const SCALE = 0.07, AMP = 9;
 let seedCounter = 1337;
+let noise, noise2;                // positional height / detail noise for the current seed
 
+const loadedChunks = new Map();   // "cx,cz" → [block keys]  (kept so we can unload them)
+const loadQueue = [];             // chunks waiting to stream in, nearest first
+let playerChunkX = null, playerChunkZ = null;
+const chunkOf = (v) => Math.floor(v / CHUNK);
+
+// Build every block of one chunk, then reconcile it (and its borders) with the world.
+function loadChunk(cx, cz) {
+    const ck = `${cx},${cz}`;
+    if (loadedChunks.has(ck)) return;
+    const x0 = cx * CHUNK, z0 = cz * CHUNK;
+    const added = [];
+    const heightAt = (x, z) => Math.floor(noise(x * SCALE, z * SCALE) * AMP);
+    const treeAt = (x, z) => noise2(x * 1.7 + 11.3, z * 1.7 + 7.1) > 0.82;
+    const inside = (x, z) => x >= x0 && x < x0 + CHUNK && z >= z0 && z < z0 + CHUNK;
+    const place = (x, y, z, type) => {
+        const k = key(x, y, z);
+        if (world.has(k)) return;
+        world.set(k, { type, index: -1, collider: null });
+        added.push(k);
+    };
+
+    // 1) terrain columns + water
+    for (let x = x0; x < x0 + CHUNK; x++)
+        for (let z = z0; z < z0 + CHUNK; z++) {
+            const h = heightAt(x, z);
+            const beach = h <= WATER_LEVEL + 1;
+            for (let y = 0; y <= h; y++) {
+                const type = y === h ? (beach ? 'sand' : 'grass')
+                    : y >= h - 2 ? (beach ? 'sand' : 'dirt') : 'stone';
+                place(x, y, z, type);
+            }
+            for (let y = h + 1; y <= WATER_LEVEL; y++) place(x, y, z, 'water');
+        }
+
+    // 2) trees — a trunk within a 2-block margin may drop leaves into this chunk, so we
+    //    scan that margin but only write cells that fall inside (keeps chunks independent).
+    for (let tx = x0 - 2; tx < x0 + CHUNK + 2; tx++)
+        for (let tz = z0 - 2; tz < z0 + CHUNK + 2; tz++) {
+            const h = heightAt(tx, tz);
+            if (h <= WATER_LEVEL + 1 || !treeAt(tx, tz)) continue;       // beaches / water → no tree
+            const trunk = 4 + Math.floor(noise2(tx, tz) * 3);
+            if (inside(tx, tz)) for (let t = 1; t <= trunk; t++) place(tx, h + t, tz, 'log');
+            const top = h + trunk;
+            for (let lx = -2; lx <= 2; lx++)
+                for (let lz = -2; lz <= 2; lz++)
+                    for (let ly = 0; ly <= 2; ly++) {
+                        if (Math.abs(lx) === 2 && Math.abs(lz) === 2 && ly !== 0) continue;
+                        if (inside(tx + lx, tz + lz)) place(tx + lx, top - 1 + ly, tz + lz, 'leaves');
+                    }
+        }
+
+    loadedChunks.set(ck, added);
+
+    // refresh new blocks + their neighbours so faces shared with existing chunks cull correctly
+    const dirty = new Set();
+    for (const k of added) {
+        dirty.add(k);
+        const [x, y, z] = parseKey(k);
+        for (const [dx, dy, dz] of NEIGHBORS) dirty.add(key(x + dx, y + dy, z + dz));
+    }
+    for (const k of dirty) refreshBlock(k);
+    blockCountDirty = true;
+}
+
+function unloadChunk(cx, cz) {
+    const ck = `${cx},${cz}`;
+    const keys = loadedChunks.get(ck);
+    if (!keys) return;
+    // remember surrounding blocks first, so neighbour chunks re-expose their now-open faces
+    const neighbours = new Set();
+    for (const k of keys) {
+        const [x, y, z] = parseKey(k);
+        for (const [dx, dy, dz] of NEIGHBORS) neighbours.add(key(x + dx, y + dy, z + dz));
+    }
+    for (const k of keys) {
+        const rec = world.get(k);
+        if (!rec) continue;                              // may have been dug out / blown up
+        if (rec.index !== -1) fields[rec.type].remove(rec.index);
+        if (rec.collider) physics.removeCollider(rec.collider, false);
+        world.delete(k);
+    }
+    loadedChunks.delete(ck);
+    for (const k of neighbours) refreshBlock(k);         // keys we just deleted are no-ops
+    blockCountDirty = true;
+}
+
+// Re-queue / unload chunks whenever the player crosses into a new chunk.
+function updateChunks() {
+    const p = playerBody.translation();
+    const pcx = chunkOf(p.x), pcz = chunkOf(p.z);
+    if (pcx === playerChunkX && pcz === playerChunkZ) return;   // cheap: only on a border crossing
+    playerChunkX = pcx; playerChunkZ = pcz;
+
+    // queue any missing chunks in the render ring, nearest first
+    for (let dx = -RENDER_DIST; dx <= RENDER_DIST; dx++)
+        for (let dz = -RENDER_DIST; dz <= RENDER_DIST; dz++) {
+            const cx = pcx + dx, cz = pcz + dz, ck = `${cx},${cz}`;
+            if (loadedChunks.has(ck) || loadQueue.some((c) => c.ck === ck)) continue;
+            loadQueue.push({ cx, cz, ck, d: dx * dx + dz * dz });
+        }
+    loadQueue.sort((a, b) => a.d - b.d);
+
+    // unload chunks past the render distance (+1 chunk of hysteresis so borders don't thrash)
+    for (const ck of [...loadedChunks.keys()]) {
+        const [cx, cz] = ck.split(',').map(Number);
+        if (Math.abs(cx - pcx) > RENDER_DIST + 1 || Math.abs(cz - pcz) > RENDER_DIST + 1) unloadChunk(cx, cz);
+    }
+}
+
+// Build only a few queued chunks per frame so streaming never stalls the frame.
+function processLoadQueue(maxPerFrame) {
+    for (let n = 0; n < maxPerFrame && loadQueue.length; n++) {
+        const c = loadQueue.shift();
+        loadChunk(c.cx, c.cz);
+    }
+}
+
+// (Re)seed the world and build the spawn region up-front behind the loading screen.
 function generateWorld() {
-    // wipe any previous world
     for (const k of [...world.keys()]) {
         const rec = world.get(k);
         if (rec.index !== -1) fields[rec.type].remove(rec.index);
         if (rec.collider) physics.removeCollider(rec.collider, false);
     }
     world.clear();
+    loadedChunks.clear();
+    loadQueue.length = 0;
+    playerChunkX = playerChunkZ = null;
 
-    const noise = makeNoise(seedCounter);
-    const noise2 = makeNoise(seedCounter + 99);
-    const SCALE = 0.07, AMP = 9;
-    const treeAt = (x, z) => noise2(x * 1.7 + 11.3, z * 1.7 + 7.1) > 0.82;
+    noise = makeNoise(seedCounter);
+    noise2 = makeNoise(seedCounter + 99);
 
-    const heights = new Map();
-    for (let x = -HALF; x < HALF; x++)
-        for (let z = -HALF; z < HALF; z++)
-            heights.set(`${x},${z}`, Math.floor(noise(x * SCALE, z * SCALE) * AMP));
-
-    // 1) fill columns (batch — refresh once at the end)
-    for (let x = -HALF; x < HALF; x++) {
-        for (let z = -HALF; z < HALF; z++) {
-            const h = heights.get(`${x},${z}`);
-            const beach = h <= WATER_LEVEL + 1;
-            for (let y = 0; y <= h; y++) {
-                let type;
-                if (y === h) type = beach ? 'sand' : 'grass';
-                else if (y >= h - 2) type = beach ? 'sand' : 'dirt';
-                else type = 'stone';
-                world.set(key(x, y, z), { type, index: -1, collider: null });
-            }
-            for (let y = h + 1; y <= WATER_LEVEL; y++)   // water fills low columns
-                world.set(key(x, y, z), { type: 'water', index: -1, collider: null });
-
-            if (!beach && h > WATER_LEVEL && Math.abs(x) < HALF - 3 && Math.abs(z) < HALF - 3 && treeAt(x, z)) {
-                const trunk = 4 + Math.floor(noise2(x, z) * 3);
-                for (let t = 1; t <= trunk; t++) world.set(key(x, h + t, z), { type: 'log', index: -1, collider: null });
-                const top = h + trunk;
-                for (let lx = -2; lx <= 2; lx++)
-                    for (let lz = -2; lz <= 2; lz++)
-                        for (let ly = 0; ly <= 2; ly++) {
-                            if (Math.abs(lx) === 2 && Math.abs(lz) === 2 && ly !== 0) continue;
-                            const kk = key(x + lx, top - 1 + ly, z + lz);
-                            if (!world.has(kk)) world.set(kk, { type: 'leaves', index: -1, collider: null });
-                        }
-            }
-        }
-    }
-
-    // 2) build render slots + colliders for exposed blocks only
-    for (const k of world.keys()) refreshBlock(k);
+    for (let dx = -RENDER_DIST; dx <= RENDER_DIST; dx++)   // spawn is in chunk (0,0)
+        for (let dz = -RENDER_DIST; dz <= RENDER_DIST; dz++)
+            loadChunk(dx, dz);
     blockCountDirty = true;
 }
 
@@ -668,7 +761,9 @@ addEventListener('wheel', (e) => {
 }, { passive: true });
 
 /* --------------------------------------------------- Day / night & lights */
-scene.fog = new THREE.Fog('#bfe3ff', 35, 95);
+// Fog ends just inside the streamed radius so chunks fade in instead of popping at a hard edge.
+const VIEW = RENDER_DIST * CHUNK;
+scene.fog = new THREE.Fog('#bfe3ff', VIEW * 0.45, VIEW * 0.95);
 
 const hemi = new THREE.HemisphereLight('#bfe3ff', '#4a5a3a', 0.6);
 scene.add(hemi);
@@ -811,6 +906,8 @@ function animate() {
 
     if (controls.isLocked && dt > 0) {
         updatePlayer(dt);
+        updateChunks();             // queue / unload chunks as the player roams
+        processLoadQueue(1);        // build one chunk per frame (collider creation is the hot part)
         physics.timestep = dt;
         physics.step();
         updateDebris(dt);
